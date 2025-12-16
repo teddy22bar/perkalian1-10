@@ -1,67 +1,215 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <title>Latihan Perkalian SD</title>
-  <style>
-    body {
-      font-family: Arial;
-      text-align: center;
-      margin-top: 100px;
-    }
-    h1 {
-      font-size: 64px;
-    }
-    #question {
-      font-size: 70px;
-      font-weight: bold;
-      margin-bottom: 40px;
-    }
-    input, button {
-      font-size: 50px;
-      padding: 30px;
-      margin: 30px;
-    }
-    #feedback {
-      font-size: 56px;
-      margin-top: 30px;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Aplikasi Kunjungan Sales dengan Area Dinamis</title>
+<style>
+body { font-family: Arial, sans-serif; margin: 20px; }
+table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+table, th, td { border: 1px solid #444; }
+th, td { padding: 8px; vertical-align: top; }
+th { background: #f2f2f2; }
+input, select { padding: 5px; margin-right: 10px; }
+button { padding: 7px 12px; cursor: pointer; margin-right: 5px; }
+img { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }
+.edit { background: orange; color: white; }
+.delete { background: red; color: white; }
+.add-area { background: green; color: white; }
+</style>
 </head>
 <body>
-  <h1>Latihan Perkalian</h1>
-  <div id="question"></div>
-  <input type="number" id="answer" placeholder="Jawaban kamu">
-  <button onclick="checkAnswer()">Cek Jawaban</button>
-  <div id="feedback"></div>
-  <button onclick="generateQuestion()">Soal Baru</button>
 
-  <script>
-    let num1, num2;
+<h2>Aplikasi Daftar Kunjungan Sales + Foto + Area Dinamis</h2>
 
-    function generateQuestion() {
-      num1 = Math.floor(Math.random() * 10) + 1; // Angka 1 - 500
-      num2 = Math.floor(Math.random() * 10) + 1;
-      document.getElementById("question").innerText = `Berapa ${num1} × ${num2}?`;
-      document.getElementById("answer").value = "";
-      document.getElementById("feedback").innerText = "";
-    }
+<!-- Form Tambah Area -->
+<div style="margin-bottom: 15px;">
+<input type="text" id="areaBaru" placeholder="Tambah Area Baru">
+<button class="add-area" onclick="tambahArea()">Tambah Area</button>
+</div>
 
-    function checkAnswer() {
-      const userAnswer = parseInt(document.getElementById("answer").value);
-      const correctAnswer = num1 * num2;
-      const feedback = document.getElementById("feedback");
+<!-- Form Input -->
+<div>
+<input type="text" id="nama" placeholder="Nama">
+<input type="text" id="alamat" placeholder="Alamat">
+<input type="number" id="jumlah" placeholder="Jumlah">
+<input type="text" id="keterangan" placeholder="Keterangan">
 
-      if (userAnswer === correctAnswer) {
-        feedback.innerText = "✅ Benar! Hebat!";
-        feedback.style.color = "green";
-      } else {
-        feedback.innerText = `❌ Salah. Jawaban yang benar adalah ${correctAnswer}.`;
-        feedback.style.color = "red";
-      }
-    }
+<!-- Dropdown Area Dinamis -->
+<select id="area">
+<option value="">Pilih Area</option>
+</select>
 
-    generateQuestion(); // Soal pertama langsung tampil
-  </script>
+<input type="file" id="foto" accept="image/*">
+
+<button onclick="tambahData()">Tambah</button>
+<button onclick="exportCSV()">Export CSV</button>
+</div>
+
+<!-- Tabel Data -->
+<table id="tabelKunjungan">
+<thead>
+<tr>
+<th>No</th>
+<th>Foto</th>
+<th>Nama</th>
+<th>Alamat</th>
+<th>Jumlah</th>
+<th>Keterangan</th>
+<th>Area</th>
+<th>Aksi</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+
+<script>
+let data = JSON.parse(localStorage.getItem("kunjunganData")) || [];
+let areaList = JSON.parse(localStorage.getItem("areaList")) || [];
+let editIndex = -1;
+
+function renderArea() {
+const select = document.getElementById("area");
+select.innerHTML = '<option value="">Pilih Area</option>';
+areaList.forEach(a => {
+const opt = document.createElement("option");
+opt.value = a;
+opt.textContent = a;
+select.appendChild(opt);
+});
+localStorage.setItem("areaList", JSON.stringify(areaList));
+}
+
+function tambahArea() {
+const areaBaru = document.getElementById("areaBaru").value.trim();
+if (!areaBaru) {
+alert("Isi nama area terlebih dahulu");
+return;
+}
+if (areaList.includes(areaBaru)) {
+alert("Area sudah ada");
+return;
+}
+areaList.push(areaBaru);
+document.getElementById("areaBaru").value = "";
+renderArea();
+}
+
+function renderTable() {
+const tbody = document.querySelector("#tabelKunjungan tbody");
+tbody.innerHTML = "";
+data.forEach((item, index) => {
+const row = `
+<tr>
+<td>${index + 1}</td>
+<td><img src="${item.foto}" alt="foto"></td>
+<td>${item.nama}</td>
+<td>${item.alamat}</td>
+<td>${item.jumlah}</td>
+<td>${item.keterangan}</td>
+<td>${item.area}</td>
+<td>
+<button class="edit" onclick="editData(${index})">Edit</button>
+<button class="delete" onclick="hapusData(${index})">Hapus</button>
+</td>
+</tr>
+`;
+tbody.innerHTML += row;
+});
+localStorage.setItem("kunjunganData", JSON.stringify(data));
+}
+
+function tambahData() {
+const nama = document.getElementById("nama").value;
+const alamat = document.getElementById("alamat").value;
+const jumlah = document.getElementById("jumlah").value;
+const keterangan = document.getElementById("keterangan").value;
+const area = document.getElementById("area").value;
+const fotoInput = document.getElementById("foto");
+
+if (!nama || !alamat || !jumlah || !area) {
+alert("Nama, Alamat, Jumlah, dan Area wajib diisi");
+return;
+}
+
+if (fotoInput.files.length === 0 && editIndex === -1) {
+alert("Foto wajib diupload");
+return;
+}
+
+if (fotoInput.files.length > 0) {
+const reader = new FileReader();
+reader.onload = function(e) {
+simpanData(e.target.result);
+};
+reader.readAsDataURL(fotoInput.files[0]);
+} else {
+simpanData(data[editIndex].foto);
+}
+}
+
+function simpanData(fotoBase64) {
+const nama = document.getElementById("nama").value;
+const alamat = document.getElementById("alamat").value;
+const jumlah = document.getElementById("jumlah").value;
+const keterangan = document.getElementById("keterangan").value;
+const area = document.getElementById("area").value;
+
+const newData = { nama, alamat, jumlah, keterangan, area, foto: fotoBase64 };
+
+if (editIndex === -1) {
+data.push(newData);
+} else {
+data[editIndex] = newData;
+editIndex = -1;
+}
+
+resetForm();
+renderTable();
+}
+
+function editData(index) {
+const item = data[index];
+document.getElementById("nama").value = item.nama;
+document.getElementById("alamat").value = item.alamat;
+document.getElementById("jumlah").value = item.jumlah;
+document.getElementById("keterangan").value = item.keterangan;
+document.getElementById("area").value = item.area;
+editIndex = index;
+}
+
+function hapusData(index) {
+if (confirm("Yakin ingin menghapus data ini?")) {
+data.splice(index, 1);
+renderTable();
+}
+}
+
+function resetForm() {
+document.getElementById("nama").value = "";
+document.getElementById("alamat").value = "";
+document.getElementById("jumlah").value = "";
+document.getElementById("keterangan").value = "";
+document.getElementById("area").value = "";
+document.getElementById("foto").value = "";
+}
+
+function exportCSV() {
+let csv = "No,Nama,Alamat,Jumlah,Keterangan,Area,Foto(Base64)\n";
+data.forEach((item, index) => {
+csv += `${index + 1},${item.nama},${item.alamat},${item.jumlah},${item.keterangan},${item.area},${item.foto}\n`;
+});
+
+const blob = new Blob([csv], { type: "text/csv" });
+const url = URL.createObjectURL(blob);
+const a = document.createElement("a");
+a.href = url;
+a.download = "kunjungan_sales.csv";
+a.click();
+}
+
+renderArea();
+renderTable();
+</script>
+
 </body>
-</html>
+  </html>
