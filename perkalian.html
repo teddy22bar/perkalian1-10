@@ -2,214 +2,456 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Aplikasi Kunjungan Sales dengan Area Dinamis</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyToko Manager V3.8 - Image Support</title>
+
+<!-- Meta Tags untuk Tampilan Aplikasi di HP -->
+<meta name="theme-color" content="#1d4ed8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MyToko">
+
+<!-- Link Manifest Sederhana (Inline) -->
+<link rel="manifest" href="data:application/manifest+json,{'name':'MyToko Manager','short_name':'MyToko','start_url':'.','display':'standalone','background_color':'#f8fafc','theme_color':'#1d4ed8'}">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
 <style>
-body { font-family: Arial, sans-serif; margin: 20px; }
-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-table, th, td { border: 1px solid #444; }
-th, td { padding: 8px; vertical-align: top; }
-th { background: #f2f2f2; }
-input, select { padding: 5px; margin-right: 10px; }
-button { padding: 7px 12px; cursor: pointer; margin-right: 5px; }
-img { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }
-.edit { background: orange; color: white; }
-.delete { background: red; color: white; }
-.add-area { background: green; color: white; }
+.chart-container { position: relative; width: 100%; height: 300px; max-height: 400px; margin: auto; }
+.card-shadow { box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); }
+.file-upload-input { display: none; }
+.line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.aspect-video-custom { aspect-ratio: 16 / 9; object-fit: cover; }
+.transition-all-200 { transition: all 0.2s ease-in-out; }
 </style>
 </head>
-<body>
+<body class="bg-slate-50 text-slate-800">
 
-<h2>Aplikasi Daftar Kunjungan Sales + Foto + Area Dinamis</h2>
+<!-- Navigasi Atas -->
+<nav class="bg-blue-700 text-white sticky top-0 z-50 shadow-lg">
+<div class="max-w-7xl mx-auto px-4 py-4 flex flex-wrap justify-between items-center gap-3">
+<div class="flex items-center gap-3">
+<i class="fa-solid fa-truck-ramp-box text-2xl"></i>
+<h1 class="font-bold text-xl tracking-tight">MyToko Manager <span class="text-[10px] bg-blue-500 px-2 py-0.5 rounded ml-1">V3.8</span></h1>
+</div>
+<div class="flex flex-wrap gap-2">
+<button onclick="app.openModal(null, 'add')" class="text-sm bg-green-600 hover:bg-green-500 px-3 py-2 rounded-lg transition border border-green-400">
+<i class="fa-solid fa-plus mr-1"></i> Toko Baru
+</button>
+<label for="csvInput" class="cursor-pointer text-sm bg-blue-600 hover:bg-blue-500 px-3 py-2 rounded-lg transition border border-blue-400">
+<i class="fa-solid fa-file-import mr-1"></i> Import CSV
+</label>
+<input type="file" id="csvInput" class="file-upload-input" accept=".csv">
+<button onclick="app.resetData()" class="text-sm bg-red-600 hover:bg-red-700 px-3 py-2 rounded-lg transition border border-red-400">
+<i class="fa-solid fa-trash mr-1"></i> Reset
+</button>
+</div>
+</div>
+</nav>
 
-<!-- Form Tambah Area -->
-<div style="margin-bottom: 15px;">
-<input type="text" id="areaBaru" placeholder="Tambah Area Baru">
-<button class="add-area" onclick="tambahArea()">Tambah Area</button>
+<main class="max-w-7xl mx-auto px-4 py-6">
+
+<!-- Status Kosong -->
+<div id="welcomeBanner" class="bg-white rounded-xl p-8 mb-6 border-2 border-dashed border-blue-200 text-center card-shadow">
+<div class="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+<i class="fa-solid fa-store text-3xl text-blue-600"></i>
+</div>
+<h2 class="text-xl font-bold mb-2">Selamat Datang!</h2>
+<p class="text-slate-600 text-sm max-w-md mx-auto mb-4">
+Data Anda kosong. Silakan <b>Impor CSV</b> atau klik <b>+ Toko Baru</b> untuk memulai.
+</p>
 </div>
 
-<!-- Form Input -->
-<div>
-<input type="text" id="nama" placeholder="Nama">
-<input type="text" id="alamat" placeholder="Alamat">
-<input type="number" id="jumlah" placeholder="Jumlah">
-<input type="text" id="keterangan" placeholder="Keterangan">
+<!-- Dashboard Utama -->
+<div id="mainDashboard" class="hidden">
 
-<!-- Dropdown Area Dinamis -->
-<select id="area">
-<option value="">Pilih Area</option>
+<!-- Opsi Laporan -->
+<div class="flex flex-wrap gap-2 mb-6 bg-white p-3 rounded-xl border card-shadow">
+<button onclick="app.shareWhatsApp()" class="flex-1 min-w-[140px] bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg font-bold text-sm transition flex items-center justify-center gap-2">
+<i class="fa-brands fa-whatsapp text-lg"></i> WhatsApp
+</button>
+<button onclick="app.exportExcel()" class="flex-1 min-w-[140px] bg-slate-700 hover:bg-slate-800 text-white py-2 px-4 rounded-lg font-bold text-sm transition flex items-center justify-center gap-2">
+<i class="fa-solid fa-file-excel text-lg"></i> Ekspor Excel
+</button>
+</div>
+
+<!-- Ringkasan Angka -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+<div class="bg-white p-4 rounded-xl border border-slate-200 card-shadow">
+<p class="text-[10px] text-slate-500 font-bold uppercase">Toko</p>
+<h3 id="kpi-stores" class="text-xl font-bold">0</h3>
+</div>
+<div class="bg-white p-4 rounded-xl border border-slate-200 card-shadow">
+<p class="text-[10px] text-slate-500 font-bold uppercase">Laku</p>
+<h3 id="kpi-laku" class="text-xl font-bold">0</h3>
+</div>
+<div class="bg-white p-4 rounded-xl border border-slate-200 card-shadow">
+<p class="text-[10px] text-slate-500 font-bold uppercase">Sisa</p>
+<h3 id="kpi-stock" class="text-xl font-bold">0</h3>
+</div>
+<div class="bg-green-50 p-4 rounded-xl border border-green-200 card-shadow">
+<p class="text-[10px] text-green-700 font-bold uppercase">Omzet</p>
+<h3 id="kpi-omzet" class="text-xl font-bold text-green-700">Rp 0</h3>
+</div>
+</div>
+
+<!-- Pencarian & Filter -->
+<div class="flex flex-col md:flex-row gap-4 mb-6 justify-between items-end">
+<div class="flex flex-wrap gap-2 w-full">
+<div class="relative flex-grow">
+<i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+<input type="text" id="searchInput" placeholder="Cari nama toko..." class="pl-10 pr-4 py-2 border rounded-lg w-full outline-none focus:ring-2 focus:ring-blue-500">
+</div>
+<select id="pathFilter" class="px-4 py-2 border rounded-lg outline-none bg-white font-medium">
+<option value="all">Semua Jalur</option>
 </select>
-
-<input type="file" id="foto" accept="image/*">
-
-<button onclick="tambahData()">Tambah</button>
-<button onclick="exportCSV()">Export CSV</button>
+</div>
 </div>
 
-<!-- Tabel Data -->
-<table id="tabelKunjungan">
-<thead>
-<tr>
-<th>No</th>
-<th>Foto</th>
-<th>Nama</th>
-<th>Alamat</th>
-<th>Jumlah</th>
-<th>Keterangan</th>
-<th>Area</th>
-<th>Aksi</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
+<!-- Grid Toko -->
+<div id="storeGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
+<div id="noResult" class="hidden text-center py-20 text-slate-400">Toko tidak ditemukan...</div>
+</div>
+</main>
+
+<!-- MODAL -->
+<div id="mainModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4">
+<div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="app.closeModal()"></div>
+<div class="bg-white rounded-2xl w-full max-w-lg relative shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+
+<div id="modalHeader" class="bg-blue-700 p-4 text-white flex justify-between items-center">
+<h3 id="modalTitle" class="font-bold text-lg">Input Data</h3>
+<button onclick="app.closeModal()" class="text-white/50 hover:text-white transition"><i class="fa-solid fa-times"></i></button>
+</div>
+
+<div class="p-6 overflow-y-auto max-h-[75vh]">
+<input type="hidden" id="editId">
+<input type="hidden" id="modalMode">
+
+<!-- BAGIAN PROFIL -->
+<div id="sectionProfile" class="space-y-4 mb-4 hidden">
+<div>
+<label class="block text-xs font-bold text-slate-400 uppercase mb-1">Nama Toko</label>
+<input type="text" id="inputNama" class="w-full p-2 border rounded-lg bg-slate-50">
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<label class="block text-xs font-bold text-slate-400 uppercase mb-1">No Jalur</label>
+<input type="text" id="inputJalur" class="w-full p-2 border rounded-lg bg-slate-50">
+</div>
+<div>
+<label class="block text-xs font-bold text-slate-400 uppercase mb-1">Harga Default</label>
+<select id="inputHargaMaster" class="w-full p-2 border rounded-lg bg-slate-50">
+<option value="1500">1.500</option>
+<option value="1600">1.600</option>
+</select>
+</div>
+</div>
+
+<!-- FITUR UPLOAD FOTO -->
+<div>
+<label class="block text-xs font-bold text-slate-400 uppercase mb-1">Foto Toko</label>
+<div class="flex items-center gap-3">
+<label class="cursor-pointer bg-blue-100 text-blue-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-200 transition">
+<i class="fa-solid fa-camera mr-1"></i> Ambil / Pilih Foto
+<input type="file" id="inputFotoFile" class="hidden" accept="image/*" onchange="app.handleImageUpload(this)">
+</label>
+<span id="fotoStatus" class="text-[10px] text-slate-400 italic">Belum ada foto</span>
+</div>
+<input type="hidden" id="inputFotoBase64">
+</div>
+
+<div>
+<label class="block text-xs font-bold text-slate-400 uppercase mb-1">Google Maps URL</label>
+<input type="text" id="inputMaps" class="w-full p-2 border rounded-lg bg-slate-50" placeholder="https://maps.google.com/...">
+</div>
+</div>
+
+<!-- BAGIAN PENJUALAN -->
+<div id="sectionSales" class="space-y-5">
+<div class="grid grid-cols-2 gap-2">
+<label class="cursor-pointer">
+<input type="radio" name="price" value="1500" class="peer hidden" onchange="app.calc()">
+<div class="p-2 text-center border rounded-lg peer-checked:bg-blue-600 peer-checked:text-white font-bold">Rp 1.500</div>
+</label>
+<label class="cursor-pointer">
+<input type="radio" name="price" value="1600" class="peer hidden" onchange="app.calc()">
+<div class="p-2 text-center border rounded-lg peer-checked:bg-blue-600 peer-checked:text-white font-bold">Rp 1.600</div>
+</label>
+</div>
+
+<div>
+<label class="block text-sm font-bold text-slate-700 mb-1 text-center uppercase">Jumlah Laku</label>
+<input type="number" id="inputLaku" class="w-full p-4 border-2 border-blue-100 rounded-xl text-4xl font-black text-center bg-blue-50 text-blue-800 outline-none" value="0" oninput="app.calc()">
+</div>
+
+<div>
+<label class="block text-xs font-bold text-slate-400 uppercase mb-1">Catatan</label>
+<textarea id="inputCatatan" rows="2" class="w-full p-3 border rounded-lg text-sm bg-slate-50" placeholder="Titip barang, bayar besok, dll..."></textarea>
+</div>
+
+<div class="bg-green-600 p-4 rounded-xl text-center">
+<span class="text-xs text-green-100 font-bold uppercase">Setoran</span>
+<h4 id="inputTotal" class="text-3xl font-black text-white">Rp 0</h4>
+</div>
+</div>
+</div>
+
+<div class="p-4 bg-slate-100 flex gap-2">
+<button onclick="app.closeModal()" class="flex-1 py-3 font-bold text-slate-500">Batal</button>
+<button onclick="app.save()" class="flex-[2] py-3 bg-blue-700 text-white font-bold rounded-xl shadow-lg">Simpan</button>
+</div>
+</div>
+</div>
+
+<div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full text-sm font-bold hidden z-[100]">Berhasil!</div>
 
 <script>
-let data = JSON.parse(localStorage.getItem("kunjunganData")) || [];
-let areaList = JSON.parse(localStorage.getItem("areaList")) || [];
-let editIndex = -1;
+const app = {
+data: [],
 
-function renderArea() {
-const select = document.getElementById("area");
-select.innerHTML = '<option value="">Pilih Area</option>';
-areaList.forEach(a => {
-const opt = document.createElement("option");
-opt.value = a;
-opt.textContent = a;
-select.appendChild(opt);
-});
-localStorage.setItem("areaList", JSON.stringify(areaList));
+init() {
+const saved = localStorage.getItem('mytoko_v38_db');
+if (saved) {
+this.data = JSON.parse(saved);
+this.showDashboard();
 }
+this.listeners();
+},
 
-function tambahArea() {
-const areaBaru = document.getElementById("areaBaru").value.trim();
-if (!areaBaru) {
-alert("Isi nama area terlebih dahulu");
-return;
-}
-if (areaList.includes(areaBaru)) {
-alert("Area sudah ada");
-return;
-}
-areaList.push(areaBaru);
-document.getElementById("areaBaru").value = "";
-renderArea();
-}
-
-function renderTable() {
-const tbody = document.querySelector("#tabelKunjungan tbody");
-tbody.innerHTML = "";
-data.forEach((item, index) => {
-const row = `
-<tr>
-<td>${index + 1}</td>
-<td><img src="${item.foto}" alt="foto"></td>
-<td>${item.nama}</td>
-<td>${item.alamat}</td>
-<td>${item.jumlah}</td>
-<td>${item.keterangan}</td>
-<td>${item.area}</td>
-<td>
-<button class="edit" onclick="editData(${index})">Edit</button>
-<button class="delete" onclick="hapusData(${index})">Hapus</button>
-</td>
-</tr>
-`;
-tbody.innerHTML += row;
-});
-localStorage.setItem("kunjunganData", JSON.stringify(data));
-}
-
-function tambahData() {
-const nama = document.getElementById("nama").value;
-const alamat = document.getElementById("alamat").value;
-const jumlah = document.getElementById("jumlah").value;
-const keterangan = document.getElementById("keterangan").value;
-const area = document.getElementById("area").value;
-const fotoInput = document.getElementById("foto");
-
-if (!nama || !alamat || !jumlah || !area) {
-alert("Nama, Alamat, Jumlah, dan Area wajib diisi");
-return;
-}
-
-if (fotoInput.files.length === 0 && editIndex === -1) {
-alert("Foto wajib diupload");
-return;
-}
-
-if (fotoInput.files.length > 0) {
+listeners() {
+document.getElementById('searchInput').addEventListener('input', () => this.renderGrid());
+document.getElementById('pathFilter').addEventListener('change', () => this.renderGrid());
+document.getElementById('csvInput').addEventListener('change', (e) => {
+const file = e.target.files[0];
+if (file) {
 const reader = new FileReader();
-reader.onload = function(e) {
-simpanData(e.target.result);
-};
-reader.readAsDataURL(fotoInput.files[0]);
-} else {
-simpanData(data[editIndex].foto);
+reader.onload = (ev) => this.processCSV(ev.target.result);
+reader.readAsText(file);
 }
-}
-
-function simpanData(fotoBase64) {
-const nama = document.getElementById("nama").value;
-const alamat = document.getElementById("alamat").value;
-const jumlah = document.getElementById("jumlah").value;
-const keterangan = document.getElementById("keterangan").value;
-const area = document.getElementById("area").value;
-
-const newData = { nama, alamat, jumlah, keterangan, area, foto: fotoBase64 };
-
-if (editIndex === -1) {
-data.push(newData);
-} else {
-data[editIndex] = newData;
-editIndex = -1;
-}
-
-resetForm();
-renderTable();
-}
-
-function editData(index) {
-const item = data[index];
-document.getElementById("nama").value = item.nama;
-document.getElementById("alamat").value = item.alamat;
-document.getElementById("jumlah").value = item.jumlah;
-document.getElementById("keterangan").value = item.keterangan;
-document.getElementById("area").value = item.area;
-editIndex = index;
-}
-
-function hapusData(index) {
-if (confirm("Yakin ingin menghapus data ini?")) {
-data.splice(index, 1);
-renderTable();
-}
-}
-
-function resetForm() {
-document.getElementById("nama").value = "";
-document.getElementById("alamat").value = "";
-document.getElementById("jumlah").value = "";
-document.getElementById("keterangan").value = "";
-document.getElementById("area").value = "";
-document.getElementById("foto").value = "";
-}
-
-function exportCSV() {
-let csv = "No,Nama,Alamat,Jumlah,Keterangan,Area,Foto(Base64)\n";
-data.forEach((item, index) => {
-csv += `${index + 1},${item.nama},${item.alamat},${item.jumlah},${item.keterangan},${item.area},${item.foto}\n`;
 });
+},
 
-const blob = new Blob([csv], { type: "text/csv" });
-const url = URL.createObjectURL(blob);
-const a = document.createElement("a");
-a.href = url;
-a.download = "kunjungan_sales.csv";
-a.click();
+handleImageUpload(input) {
+const file = input.files[0];
+if (file) {
+const reader = new FileReader();
+reader.onload = (e) => {
+document.getElementById('inputFotoBase64').value = e.target.result;
+document.getElementById('fotoStatus').textContent = "Foto dipilih ✅";
+document.getElementById('fotoStatus').classList.add('text-green-600');
+};
+reader.readAsDataURL(file);
+}
+},
+
+processCSV(csv) {
+const lines = csv.split(/\r?\n/);
+const newData = [];
+for (let i = 1; i < lines.length; i++) {
+if (!lines[i].trim()) continue;
+const row = lines[i].split(',');
+newData.push({
+id: Date.now() + i,
+Nama_Toko: row[0] || 'Toko',
+Link_Maps: row[1] || '#',
+No_Jalur: row[2] || 'Umum',
+Kacang: parseInt(row[3]) || 0,
+Kerupuk: parseInt(row[4]) || 0,
+Laku: 0, Total: 0, Harga: 1500, Catatan: '', Link_Foto: ''
+});
+}
+this.data = newData;
+this.saveToStorage();
+this.showDashboard();
+},
+
+saveToStorage() { localStorage.setItem('mytoko_v38_db', JSON.stringify(this.data)); },
+
+showDashboard() {
+document.getElementById('welcomeBanner').classList.add('hidden');
+document.getElementById('mainDashboard').classList.remove('hidden');
+this.populateFilter();
+this.renderAll();
+},
+
+populateFilter() {
+const paths = [...new Set(this.data.map(d => d.No_Jalur))].sort();
+const sel = document.getElementById('pathFilter');
+sel.innerHTML = '<option value="all">Semua Jalur</option>';
+paths.forEach(p => {
+const opt = document.createElement('option');
+opt.value = p; opt.textContent = p;
+sel.appendChild(opt);
+});
+},
+
+renderAll() {
+this.renderKPI();
+this.renderGrid();
+},
+
+renderKPI() {
+const laku = this.data.reduce((s, d) => s + (d.Laku || 0), 0);
+const stock = this.data.reduce((s, d) => s + (d.Kacang || 0) + (d.Kerupuk || 0) - (d.Laku || 0), 0);
+const omzet = this.data.reduce((s, d) => s + (d.Total || 0), 0);
+document.getElementById('kpi-stores').textContent = this.data.length;
+document.getElementById('kpi-laku').textContent = laku;
+document.getElementById('kpi-stock').textContent = stock < 0 ? 0 : stock;
+document.getElementById('kpi-omzet').textContent = "Rp " + omzet.toLocaleString('id-ID');
+},
+
+renderGrid() {
+const query = document.getElementById('searchInput').value.toLowerCase();
+const path = document.getElementById('pathFilter').value;
+const grid = document.getElementById('storeGrid');
+grid.innerHTML = '';
+
+const filtered = this.data.filter(d =>
+d.Nama_Toko.toLowerCase().includes(query) && (path === 'all' || d.No_Jalur === path)
+);
+
+if (filtered.length === 0) {
+document.getElementById('noResult').classList.remove('hidden');
+} else {
+document.getElementById('noResult').classList.add('hidden');
+filtered.forEach(item => {
+const card = document.createElement('div');
+card.className = "bg-white rounded-xl border border-slate-200 card-shadow overflow-hidden flex flex-col";
+card.innerHTML = `
+<div class="relative">
+${item.Link_Foto ? `<img src="${item.Link_Foto}" class="w-full aspect-video-custom">` : `<div class="w-full aspect-video-custom bg-slate-100 flex items-center justify-center text-slate-300"><i class="fa-solid fa-image text-3xl"></i></div>`}
+<div class="absolute top-2 left-2 flex gap-1">
+<span class="text-[9px] font-bold bg-white px-2 py-0.5 rounded shadow text-blue-700">${item.No_Jalur}</span>
+</div>
+<a href="${item.Link_Maps}" target="_blank" class="absolute top-2 right-2 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center text-red-500 shadow"><i class="fa-solid fa-location-dot"></i></a>
+</div>
+<div class="p-4 flex flex-col gap-2 flex-grow">
+<div class="flex justify-between items-start">
+<h4 class="font-bold text-slate-800 line-clamp-2 leading-tight flex-grow">${item.Nama_Toko}</h4>
+<button onclick="app.openModal(${item.id}, 'edit')" class="text-slate-300 ml-2"><i class="fa-solid fa-gear"></i></button>
+</div>
+<div class="flex justify-between items-end border-t pt-3 mt-auto">
+<div>
+<span class="text-[10px] block text-slate-400 font-bold">LAKU: ${item.Laku}</span>
+<span class="text-lg font-black text-green-600">Rp ${item.Total.toLocaleString('id-ID')}</span>
+</div>
+<button onclick="app.openModal(${item.id}, 'input')" class="bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold">Input</button>
+</div>
+</div>`;
+grid.appendChild(card);
+});
+}
+},
+
+openModal(id, mode) {
+document.getElementById('editId').value = id || 'new';
+document.getElementById('modalMode').value = mode;
+const sectionSales = document.getElementById('sectionSales');
+const sectionProfile = document.getElementById('sectionProfile');
+
+if (mode === 'add') {
+document.getElementById('modalTitle').textContent = "Toko Baru";
+sectionSales.classList.add('hidden'); sectionProfile.classList.remove('hidden');
+this.resetForm();
+} else {
+const item = this.data.find(d => d.id === id);
+if (mode === 'edit') {
+document.getElementById('modalTitle').textContent = "Edit Profil";
+sectionSales.classList.add('hidden'); sectionProfile.classList.remove('hidden');
+this.fillForm(item);
+} else {
+document.getElementById('modalTitle').textContent = item.Nama_Toko;
+sectionSales.classList.remove('hidden'); sectionProfile.classList.add('hidden');
+this.fillSales(item);
+}
+}
+document.getElementById('mainModal').classList.remove('hidden');
+},
+
+resetForm() {
+document.getElementById('inputNama').value = '';
+document.getElementById('inputJalur').value = '';
+document.getElementById('inputFotoBase64').value = '';
+document.getElementById('fotoStatus').textContent = "Belum ada foto";
+document.getElementById('inputMaps').value = '';
+},
+
+fillForm(item) {
+document.getElementById('inputNama').value = item.Nama_Toko;
+document.getElementById('inputJalur').value = item.No_Jalur;
+document.getElementById('inputHargaMaster').value = item.Harga;
+document.getElementById('inputMaps').value = item.Link_Maps;
+document.getElementById('inputFotoBase64').value = item.Link_Foto || '';
+document.getElementById('fotoStatus').textContent = item.Link_Foto ? "Foto tersimpan ✅" : "Belum ada foto";
+},
+
+fillSales(item) {
+document.getElementById('inputLaku').value = item.Laku || 0;
+document.getElementById('inputCatatan').value = item.Catatan || '';
+const radios = document.getElementsByName('price');
+radios.forEach(r => { if(parseInt(r.value) === item.Harga) r.checked = true; });
+this.calc();
+},
+
+calc() {
+const qty = parseInt(document.getElementById('inputLaku').value) || 0;
+const price = [...document.getElementsByName('price')].find(r => r.checked)?.value || 1500;
+document.getElementById('inputTotal').textContent = "Rp " + (qty * price).toLocaleString('id-ID');
+},
+
+save() {
+const id = document.getElementById('editId').value;
+const mode = document.getElementById('modalMode').value;
+
+if (mode === 'add' || mode === 'edit') {
+const newData = {
+Nama_Toko: document.getElementById('inputNama').value || 'Toko',
+No_Jalur: document.getElementById('inputJalur').value || 'Umum',
+Harga: parseInt(document.getElementById('inputHargaMaster').value),
+Link_Foto: document.getElementById('inputFotoBase64').value,
+Link_Maps: document.getElementById('inputMaps').value || '#'
+};
+if (mode === 'add') {
+this.data.push({ ...newData, id: Date.now(), Laku: 0, Total: 0, Catatan: '', Kacang: 0, Kerupuk: 0 });
+} else {
+const idx = this.data.findIndex(d => d.id == id);
+this.data[idx] = { ...this.data[idx], ...newData };
+}
+} else {
+const qty = parseInt(document.getElementById('inputLaku').value) || 0;
+const price = parseInt([...document.getElementsByName('price')].find(r => r.checked).value);
+const idx = this.data.findIndex(d => d.id == id);
+this.data[idx].Laku = qty;
+this.data[idx].Harga = price;
+this.data[idx].Total = qty * price;
+this.data[idx].Catatan = document.getElementById('inputCatatan').value;
 }
 
-renderArea();
-renderTable();
-</script>
+this.saveToStorage(); this.renderAll(); this.closeModal(); this.showToast();
+},
 
+closeModal() { document.getElementById('mainModal').classList.add('hidden'); },
+
+showToast() {
+const t = document.getElementById('toast'); t.classList.remove('hidden');
+setTimeout(() => t.classList.add('hidden'), 2000);
+},
+
+resetData() { if(confirm("Hapus semua?")) { localStorage.clear(); location.reload(); } },
+
+shareWhatsApp() {
+let text = `📊 *LAPORAN PENJUALAN*\n\n`;
+this.data.forEach(d => {
+if(d.Laku > 0) text += `🏠 ${d.Nama_Toko}: ${d.Laku} unit (Rp ${d.Total.toLocaleString('id-ID')})\n`;
+});
+window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+}
+};
+
+window.onload = () => app.init();
+</script>
 </body>
 </html>
